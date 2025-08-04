@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ganesh Stores - Inventory Management</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #e65100;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #e65100;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    button:hover {
+      background-color: #bf360c;
+    }
+
+    .action-btn {
+      background-color: #1976d2;
+    }
+
+    .action-btn:hover {
+      background-color: #0d47a1;
+    }
+
+    .delete-btn {
+      background-color: #d32f2f;
+    }
+
+    .delete-btn:hover {
+      background-color: #b71c1c;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Ganesh Stores - Inventory</h1>
+  <div class="container">
+    <div class="controls">
+      <input type="text" id="itemName" placeholder="Enter item name">
+      <input type="number" id="itemStock" placeholder="Enter stock quantity">
+      <button onclick="addItem()">Add Item</button>
+    </div>
+
+    <div class="controls">
+      <input type="text" id="searchInput" placeholder="Search item..." onkeyup="renderTable()">
+      <select id="sortSelect" onchange="renderTable()">
+        <option value="">Sort by</option>
+        <option value="nameAsc">Name ↑</option>
+        <option value="nameDesc">Name ↓</option>
+        <option value="stockAsc">Stock ↑</option>
+        <option value="stockDesc">Stock ↓</option>
+      </select>
+    </div>
+
+    <table id="inventoryTable">
+      <thead>
+        <tr>
+          <th onclick="setSort('name')">Item Name</th>
+          <th onclick="setSort('stock')">Stock</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Inventory rows go here -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    let inventory = [];
+    let sortField = "";
+    let sortOrder = "asc";
+
+    window.onload = function() {
+      const saved = localStorage.getItem("ganesh_inventory");
+      if (saved) {
+        inventory = JSON.parse(saved);
+        renderTable();
+      }
+    };
+
+    function saveToLocalStorage() {
+      localStorage.setItem("ganesh_inventory", JSON.stringify(inventory));
+    }
+
+    function addItem() {
+      const name = document.getElementById("itemName").value.trim();
+      const stock = document.getElementById("itemStock").value.trim();
+
+      if (name === "" || stock === "" || isNaN(stock) || stock < 0) {
+        alert("Please enter valid item name and stock quantity.");
+        return;
+      }
+
+      inventory.push({ name, stock: parseInt(stock) });
+      saveToLocalStorage();
+      renderTable();
+
+      document.getElementById("itemName").value = "";
+      document.getElementById("itemStock").value = "";
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("inventoryTable").getElementsByTagName("tbody")[0];
+      tbody.innerHTML = "";
+
+      let filtered = inventory.filter(item =>
+        item.name.toLowerCase().includes(document.getElementById("searchInput").value.toLowerCase())
+      );
+
+      const sortOption = document.getElementById("sortSelect").value;
+      switch (sortOption) {
+        case "nameAsc":
+          filtered.sort((a, b) => a.name.localeCompare(b.name));
+          break;
+        case "nameDesc":
+          filtered.sort((a, b) => b.name.localeCompare(a.name));
+          break;
+        case "stockAsc":
+          filtered.sort((a, b) => a.stock - b.stock);
+          break;
+        case "stockDesc":
+          filtered.sort((a, b) => b.stock - a.stock);
+          break;
+      }
+
+      filtered.forEach((item, index) => {
+        const row = tbody.insertRow();
+
+        const cell1 = row.insertCell(0);
+        const cell2 = row.insertCell(1);
+        const cell3 = row.insertCell(2);
+
+        cell1.textContent = item.name;
+        cell2.textContent = item.stock;
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edit";
+        editBtn.className = "action-btn";
+        editBtn.onclick = () => editItem(index);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.className = "delete-btn";
+        deleteBtn.onclick = () => deleteItem(index);
+
+        cell3.appendChild(editBtn);
+        cell3.appendChild(deleteBtn);
+      });
+    }
+
+    function editItem(index) {
+      const newStock = prompt(`Update stock for "${inventory[index].name}":`, inventory[index].stock);
+      if (newStock !== null && !isNaN(newStock) && newStock >= 0) {
+        inventory[index].stock = parseInt(newStock);
+        saveToLocalStorage();
+        renderTable();
+      } else if (newStock !== null) {
+        alert("Invalid input. Please enter a number >= 0.");
+      }
+    }
+
+    function deleteItem(index) {
+      if (confirm(`Delete "${inventory[index].name}"?`)) {
+        inventory.splice(index, 1);
+        saveToLocalStorage();
+        renderTable();
+      }
+    }
+  </script>
+
+</body>
+</html>
